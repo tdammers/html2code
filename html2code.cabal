@@ -17,8 +17,9 @@ cabal-version: >=1.10
 library
   hs-source-dirs: src
   exposed-modules: Text.Html2Code
-                 , Text.Html2Code.Writers.Hyperscript
                  , Text.Html2Code.Writers.Common
+                 , Text.Html2Code.Writers.Hyperscript
+                 , Text.Html2Code.Writers.Halogen
   build-depends: base >= 4.7 && < 5
                , tagsoup
                , text
