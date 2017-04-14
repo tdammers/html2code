@@ -27,6 +27,7 @@ library
                , tagsoup
                , text
                , mtl
+               , safe
   default-language: Haskell2010
 
 executable html2code

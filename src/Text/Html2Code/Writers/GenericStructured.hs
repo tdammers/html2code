@@ -24,7 +24,7 @@ data Language a m =
         , lSepAttribs :: W a m ()
         , lEndAttribs :: W a m ()
         , lAttrib :: QName -> a -> W a m ()
-        , lAttribVisible :: QName -> Bool
+        , lAttribVisible :: XmlTree -> Bool
         , lBeginChildren :: W a m ()
         , lSepChildren :: W a m ()
         , lEndChildren :: W a m ()
@@ -98,9 +98,17 @@ tagW node = do
 attribsW :: (StringLike a, IsString a, Monoid a, Monad m)
          => [XmlTree]
          -> ReaderT (Language a m) (W a m) ()
-attribsW [] =
+attribsW xs = do
+    l <- ask
+    let xs' = filter (lAttribVisible l) xs
+    attribsW' xs'
+
+attribsW' :: (StringLike a, IsString a, Monoid a, Monad m)
+         => [XmlTree]
+         -> ReaderT (Language a m) (W a m) ()
+attribsW' [] =
     tell "\n"
-attribsW (x:xs) = do
+attribsW' (x:xs) = do
     l <- ask
     attribW x
     tell "\n"

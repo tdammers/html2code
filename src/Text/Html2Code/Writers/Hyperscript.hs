@@ -1,5 +1,6 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
+{-#LANGUAGE TupleSections #-}
 module Text.Html2Code.Writers.Hyperscript
 where
 
@@ -14,6 +15,9 @@ import Text.XML.HXT.DOM.TypeDefs
 import Data.Tree.NTree.TypeDefs
 import Text.XML.HXT.DOM.QualifiedName
 import Data.Maybe (catMaybes)
+import Data.Char (toLower)
+import Data.List (intercalate)
+import Safe (readMay)
 
 hyperscript :: (StringLike a, IsString a, Monoid a, Monad m)
         => Language a m
@@ -35,22 +39,21 @@ hyperscript = Language
         tell ", "
     , lEndAttribs =
         tellLn "}\n"
-    , lAttrib = \name value -> do
-        tell $ fromString (qualifiedName name)
-        tell $ ": "
-        tell . quoteStr $ value
-    , lAttribVisible = \name ->
-        case qualifiedName name of
-            "class" -> False
-            "id" -> False
-            _ -> True
-        
+    , lAttrib = hyAttrib
+    , lAttribVisible = \case
+        (NTree (XAttr name) _) ->
+            case qualifiedName name of
+                "class" -> False
+                "id" -> False
+                _ -> True
+        _ -> False
+
     , lBeginChildren =
         tellLn ", "
     , lSepChildren =
         tell ", "
     , lEndChildren =
-        tellLn ")"
+        tellLn ""
     }
 
 write :: (StringLike a, IsString a, Monoid a, Monad m)
@@ -61,3 +64,10 @@ write = G.write hyperscript
 
 quoteStr :: (StringLike a, IsString a) => a -> a
 quoteStr = fromString . show . toString
+
+hyAttrib :: (StringLike a, IsString a, Monoid a, Monad m)
+         => QName -> a -> W a m ()
+hyAttrib name value = do
+    tell $ fromString (qualifiedName name)
+    tell $ ": "
+    tell $ fromString . show . toString $ value
