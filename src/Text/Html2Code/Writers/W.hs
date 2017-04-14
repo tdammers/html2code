@@ -1,11 +1,12 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
-module Text.Html2Code.Writers.Common
+module Text.Html2Code.Writers.W
 ( W (..)
 , runW
 , warn
 , indent
 , indented
+, indentedT
 , tell
 , tellLn
 )
@@ -47,9 +48,12 @@ indentLess = modify pred
 indented :: (Monoid a, Monad m) => W a m x -> W a m x
 indented a = indentMore *> a <* indentLess
 
+indentedT :: (MonadTrans t, Monoid a, Monad m, Applicative (t (W a m)))
+          => t (W a m) x
+          -> t (W a m) x
+indentedT a = lift indentMore *> a <* lift indentLess
+
 tellLn :: (IsString a, Monoid a, Monad m) => a -> W a m ()
 tellLn msg = do
     indent
     tell msg
-
-

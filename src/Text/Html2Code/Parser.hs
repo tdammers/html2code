@@ -1,7 +1,12 @@
 module Text.Html2Code.Parser
 ( parseTree
-, TagTree (..)
 )
 where
 
-import Text.HTML.TagSoup.Tree (parseTree, TagTree (..))
+import Text.XML.HXT.DOM.TypeDefs
+import Text.XML.HXT.Arrow.ReadDocument
+import Control.Arrow.ListArrow
+
+parseTree :: String -> [XmlTree]
+parseTree src =
+    runLA hread src

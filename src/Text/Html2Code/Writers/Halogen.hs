@@ -3,88 +3,51 @@
 module Text.Html2Code.Writers.Halogen
 where
 
-import Text.HTML.TagSoup (Tag (..), Attribute (..))
-import Text.HTML.TagSoup.Tree (TagTree (..))
 import Data.Monoid ( Monoid (..), (<>) )
 import Data.String ( IsString (..) )
 import Text.StringLike ( StringLike (..) )
-import Text.Html2Code.Writers.Common
-import Control.Monad (forM_)
+import Text.Html2Code.Writers.W
+import qualified Text.Html2Code.Writers.GenericStructured as G
+import Text.Html2Code.Writers.GenericStructured (Language (..))
+import Control.Monad (forM_, forM)
+import Text.XML.HXT.DOM.TypeDefs
+import Data.Tree.NTree.TypeDefs
+import Text.XML.HXT.DOM.QualifiedName
 
-write :: (StringLike a, IsString a, Monoid a, Monad m) => (String -> m ()) -> [TagTree a] -> m a
-write writeWarning trees =
-    runW writeWarning (treesW' "" trees)
-
-treesW :: (StringLike a, IsString a, Monoid a, Monad m)
-      => [TagTree a]
-      -> W a m ()
-treesW = treesW' ", "
-
-treesW' :: (StringLike a, IsString a, Monoid a, Monad m)
-        => a
-        -> [TagTree a]
-        -> W a m ()
-treesW' _ [] = return ()
-treesW' sep (child:children) = do
-    treeW child
-    tell "\n"
-    forM_ children $ \child -> do
-        indent
-        tell sep
-        treeW child
-        tell "\n"
-
-treeW :: (StringLike a, IsString a, Monoid a, Monad m)
-      => TagTree a
-      -> W a m ()
-treeW (TagLeaf tag) =
-    tagW tag
-treeW (TagBranch tagName attribs children) = do
-    tell $ "HH." <> tagName <> "\n"
-    indented $ do
+halogen :: (StringLike a, IsString a, Monoid a, Monad m)
+        => Language a m
+halogen = Language
+    { lBeginTag = \name -> do
+        tell $ "HH." <> fromString (qualifiedName name) <> "\n"
+    , lEndTag = \name ->
+        pure ()
+    , lText = \str -> do
+        tell $ "HH.text " <> (quoteStr (fromString str))
+    , lBeginAttribs =
         tellLn "( "
-        attribsW attribs
-        tellLn "),\n"
-        tellLn "[ "
-        treesW $ filter visible children
-        tellLn "]\n"
-
-tagW :: (StringLike a, IsString a, Monoid a, Monad m)
-     => Tag a
-     -> W a m ()
-tagW = \case 
-    TagText str ->
-        tell $ "HH.text " <> (quoteStr str)
-    x -> do
-        warn $ "html2code: Don't know how to deal with tag: " <> (show . fmap toString $ x) <> "\n"
-        tell $ "HH.text \"\""
-
-attribsW :: (StringLike a, IsString a, Monoid a, Monad m)
-         => [Attribute a]
-         -> W a m ()
-attribsW [] =
-    tell "\n"
-attribsW (x:xs) = do
-    attribW x
-    tell "\n"
-    forM_ xs $ \x -> do
-        indent
+    , lSepAttribs =
         tell ", "
-        attribW x
-        tell "\n"
+    , lEndAttribs =
+        tellLn ")\n"
+    , lAttrib = \name values -> do
+        tell $ "HP."
+        tell $ fromString (qualifiedName name)
+        tell $ " "
+        tell . quoteStr . mconcat $ values
+        
+    , lBeginChildren =
+        tellLn "[ "
+    , lSepChildren =
+        tell ", "
+    , lEndChildren =
+        tellLn "]"
+    }
 
-attribW :: (StringLike a, IsString a, Monoid a, Monad m)
-        => Attribute a
-        -> W a m ()
-attribW (name, value) = do
-    tell $ "HP." <> name
-    tell " "
-    tell $ quoteStr value
-
-visible :: TagTree a -> Bool
-visible (TagBranch _ _ _) = True
-visible (TagLeaf (TagText _)) = True
-visible _ = False
+write :: (StringLike a, IsString a, Monoid a, Monad m)
+      => (String -> m ())
+      -> [XmlTree]
+      -> m a
+write = G.write halogen
 
 quoteStr :: (StringLike a, IsString a) => a -> a
 quoteStr = fromString . show . toString
