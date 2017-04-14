@@ -13,13 +13,19 @@ import Control.Monad (forM_, forM)
 import Text.XML.HXT.DOM.TypeDefs
 import Data.Tree.NTree.TypeDefs
 import Text.XML.HXT.DOM.QualifiedName
+import Data.Maybe (catMaybes)
 
 hyperscript :: (StringLike a, IsString a, Monoid a, Monad m)
         => Language a m
 hyperscript = Language
-    { lBeginTag = \name -> do
-        tell $ "h(" <> fromString (quoteStr (qualifiedName name)) <> ", \n"
-    , lEndTag = \name ->
+    { lBeginTag = \name attrs -> do
+        let selector = mconcat . catMaybes $
+                [ Just (qualifiedName name)
+                , ("#" <>) <$> lookup "id" attrs
+                , mconcat . map ("." <>) . words <$> lookup "class" attrs
+                ]
+        tell $ "h(" <> fromString (quoteStr selector) <> ", \n"
+    , lEndTag = \name _ ->
         tell ")"
     , lText = \str -> do
         tell $ fromString (quoteStr str)
@@ -29,10 +35,15 @@ hyperscript = Language
         tell ", "
     , lEndAttribs =
         tellLn "}\n"
-    , lAttrib = \name values -> do
+    , lAttrib = \name value -> do
         tell $ fromString (qualifiedName name)
         tell $ ": "
-        tell . quoteStr . mconcat $ values
+        tell . quoteStr $ value
+    , lAttribVisible = \name ->
+        case qualifiedName name of
+            "class" -> False
+            "id" -> False
+            _ -> True
         
     , lBeginChildren =
         tellLn ", "

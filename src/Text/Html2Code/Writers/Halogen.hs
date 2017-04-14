@@ -17,9 +17,9 @@ import Text.XML.HXT.DOM.QualifiedName
 halogen :: (StringLike a, IsString a, Monoid a, Monad m)
         => Language a m
 halogen = Language
-    { lBeginTag = \name -> do
+    { lBeginTag = \name attrs -> do
         tell $ "HH." <> fromString (qualifiedName name) <> "\n"
-    , lEndTag = \name ->
+    , lEndTag = \name attrs ->
         pure ()
     , lText = \str -> do
         tell $ "HH.text " <> (quoteStr (fromString str))
@@ -29,11 +29,12 @@ halogen = Language
         tell ", "
     , lEndAttribs =
         tellLn ")\n"
-    , lAttrib = \name values -> do
+    , lAttrib = \name value -> do
         tell $ "HP."
         tell $ fromString (qualifiedName name)
         tell $ " "
-        tell . quoteStr . mconcat $ values
+        tell . quoteStr $ value
+    , lAttribVisible = const True
         
     , lBeginChildren =
         tellLn "[ "

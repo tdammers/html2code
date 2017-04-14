@@ -1,5 +1,6 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
+{-#LANGUAGE TupleSections #-}
 module Text.Html2Code.Writers.GenericStructured
 where
 
@@ -12,16 +13,18 @@ import Text.XML.HXT.DOM.TypeDefs
 import Data.Tree.NTree.TypeDefs
 import Text.XML.HXT.DOM.QualifiedName
 import Control.Monad.Reader
+import Data.Maybe (catMaybes)
 
 data Language a m =
     Language
-        { lBeginTag :: QName -> W a m ()
-        , lEndTag :: QName -> W a m ()
+        { lBeginTag :: QName -> [(String, String)] -> W a m ()
+        , lEndTag :: QName -> [(String, String)] -> W a m ()
         , lText :: String -> W a m ()
         , lBeginAttribs :: W a m ()
         , lSepAttribs :: W a m ()
         , lEndAttribs :: W a m ()
-        , lAttrib :: QName -> [a] -> W a m ()
+        , lAttrib :: QName -> a -> W a m ()
+        , lAttribVisible :: QName -> Bool
         , lBeginChildren :: W a m ()
         , lSepChildren :: W a m ()
         , lEndChildren :: W a m ()
@@ -63,7 +66,14 @@ treeW (NTree t []) =
     tagW t
 treeW (NTree (XTag tagName attribs) children) = do
     l <- ask
-    lift $ lBeginTag l tagName
+    strAttribs <- fmap catMaybes $ forM attribs $ \case
+        (NTree (XAttr name) values) ->
+            Just . (qualifiedName name,) <$> collapseAttribValues (lift . warn) values
+        x -> do
+            lift $ warn $ "Invalid attribute value item " <> show x
+            pure Nothing
+
+    lift $ lBeginTag l tagName strAttribs
     indentedT $ do
         lift $ lBeginAttribs l
         attribsW attribs
@@ -71,6 +81,7 @@ treeW (NTree (XTag tagName attribs) children) = do
         lift $ lBeginChildren l
         treesW $ filter visible children
         lift $ lEndChildren l
+    lift $ lEndTag l tagName strAttribs
 
 tagW :: (StringLike a, IsString a, Monoid a, Monad m)
      => XNode
@@ -104,15 +115,22 @@ attribW :: (StringLike a, IsString a, Monoid a, Monad m)
         -> ReaderT (Language a m) (W a m) ()
 attribW (NTree (XAttr name) values) = do
     l <- ask
-    valueStrs <- forM values $ \case
+    valueStr <- collapseAttribValues (lift . warn) values
+    lift $ lAttrib l name valueStr
+attribW x =
+    lift $ warn $ "Invalid attribute: " <> show x
+
+collapseAttribValues :: (Monad m, IsString a, Monoid a)
+                     => (String -> m ())
+                     -> [XmlTree]
+                     -> m a
+collapseAttribValues warn values =
+     fmap mconcat $ forM values $ \case
         (NTree (XText value) _) ->
             pure (fromString value)
         x -> do
-            lift $ warn $ "Invalid attribute value: " <> show x
+            warn $ "Invalid attribute value: " <> show x
             pure ""
-    lift $ lAttrib l name valueStrs
-attribW x =
-    lift $ warn $ "Invalid attribute: " <> show x
 
 visible :: XmlTree -> Bool
 visible (NTree (XText _) _) = True
