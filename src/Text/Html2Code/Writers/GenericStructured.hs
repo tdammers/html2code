@@ -52,12 +52,11 @@ treesW' :: (StringLike a, IsString a, Monoid a, Monad m)
 treesW' _ [] = return ()
 treesW' sep (child:children) = do
     treeW child
-    tell "\n"
+    lift endl
     forM_ children $ \child -> do
-        lift $ indent
-        lift $ sep
+        lift sep
         treeW child
-        lift $ tell "\n"
+        lift endl
 
 treeW :: (StringLike a, IsString a, Monoid a, Monad m)
       => XmlTree
@@ -107,16 +106,15 @@ attribsW' :: (StringLike a, IsString a, Monoid a, Monad m)
          => [XmlTree]
          -> ReaderT (Language a m) (W a m) ()
 attribsW' [] =
-    tell "\n"
+    lift endl
 attribsW' (x:xs) = do
     l <- ask
     attribW x
-    tell "\n"
+    lift endl
     forM_ xs $ \x -> do
-        lift indent
         lift $ lSepAttribs l
         attribW x
-        lift $ tell "\n"
+        lift endl
 
 attribW :: (StringLike a, IsString a, Monoid a, Monad m)
         => XmlTree

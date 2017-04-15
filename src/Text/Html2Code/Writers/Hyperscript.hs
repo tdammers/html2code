@@ -28,17 +28,18 @@ hyperscript = Language
                 , ("#" <>) <$> lookup "id" attrs
                 , mconcat . map ("." <>) . words <$> lookup "class" attrs
                 ]
-        tell $ "h(" <> fromString (quoteStr selector) <> ", \n"
+        echo $ "h(" <> fromString (quoteStr selector) <> ","
+        endl
     , lEndTag = \name _ ->
-        tell ")"
+        echo ")"
     , lText = \str -> do
-        tell $ fromString (quoteStr str)
+        echo $ fromString (quoteStr str)
     , lBeginAttribs =
-        tellLn "{ "
+        echo "{ "
     , lSepAttribs =
-        tell ", "
+        echo ", "
     , lEndAttribs =
-        tellLn "}\n"
+        echo "}" >> endl
     , lAttrib = hyAttrib
     , lAttribVisible = \case
         (NTree (XAttr name) _) ->
@@ -49,11 +50,11 @@ hyperscript = Language
         _ -> False
 
     , lBeginChildren =
-        tellLn ", "
+        echo ", "
     , lSepChildren =
-        tell ", "
+        echo ", "
     , lEndChildren =
-        tellLn ""
+        echo ""
     }
 
 write :: (StringLike a, IsString a, Monoid a, Monad m)
@@ -68,6 +69,6 @@ quoteStr = fromString . show . toString
 hyAttrib :: (StringLike a, IsString a, Monoid a, Monad m)
          => QName -> a -> W a m ()
 hyAttrib name value = do
-    tell $ fromString (qualifiedName name)
-    tell $ ": "
-    tell $ fromString . show . toString $ value
+    echo $ fromString (qualifiedName name)
+    echo $ ": "
+    echo $ fromString . show . toString $ value

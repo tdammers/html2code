@@ -23,26 +23,27 @@ halogen :: (StringLike a, IsString a, Monoid a, Monad m)
         => Language a m
 halogen = Language
     { lBeginTag = \name attrs -> do
-        tell $ "HH." <> fromString (qualifiedName name) <> "\n"
+        echo $ "HH." <> fromString (qualifiedName name)
+        endl
     , lEndTag = \name attrs ->
         pure ()
     , lText = \str -> do
-        tell $ "HH.text " <> (quoteStr (fromString str))
+        echo $ "HH.text " <> (quoteStr (fromString str))
     , lBeginAttribs =
-        tellLn "[ "
+        echo "[ "
     , lSepAttribs =
-        tell ", "
+        echo ", "
     , lEndAttribs =
-        tellLn "]\n"
+        echo "]" >> endl
     , lAttrib = halogenAttrib
     , lAttribVisible = const True
         
     , lBeginChildren =
-        tellLn "[ "
+        echo "[ "
     , lSepChildren =
-        tell ", "
+        echo ", "
     , lEndChildren =
-        tellLn "]"
+        echo "]"
     }
 
 write :: (StringLike a, IsString a, Monoid a, Monad m)
@@ -59,9 +60,9 @@ halogenAttrib :: (StringLike a, IsString a, Monoid a, Monad m)
 halogenAttrib name value = do
     (name', value') <-
         either fail pure $ translateAttribute (name, toString value)
-    tell $ fromString name'
-    tell $ " "
-    tell $ fromString value'
+    echo $ fromString name'
+    echo $ " "
+    echo $ fromString value'
 
 translateAttribute :: (QName, String) -> Either String (String, String)
 translateAttribute (name, val) = do
