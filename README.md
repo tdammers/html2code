@@ -28,3 +28,10 @@ trick:
 CLI argument support is very limited right now; html2code always reads HTML
 from stdin, outputs code on stdout, and issues warnings on stderr. One of
 `--halogen` or `--hyperscript` must be provided to select the output language.
+
+## License
+
+This is free software, released under the terms of the 3-Clause BSD License.
+See the enclosed `LICENSE` file for details.
+
+Copyright (c) 2017 Tobias Dammers
