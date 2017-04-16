@@ -1,7 +1,29 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
 {-#LANGUAGE TupleSections #-}
+
+-- | A generic writer for structured DSLs. The general pattern is, roughly:
+--
+-- @
+-- beginTag
+--     beginAttribs attrib
+--     sepAttribs attrib
+--     ...
+--     endAttribs
+--     beginChildren {recurse}
+--     sepChildren {recurse}
+--     ...
+--     endChildren
+-- endTag
+-- @
+--
+-- The generic writer is parametrized with a 'Language' data structure that
+-- fills in the non-generic parts (and thus defined what tags, attributes,
+-- etc., look like in the specific target language).
 module Text.Html2Code.Writers.GenericStructured
+( Language (..)
+, write
+)
 where
 
 import Data.Monoid ( Monoid (..), (<>) )
@@ -15,18 +37,31 @@ import Text.XML.HXT.DOM.QualifiedName
 import Control.Monad.Reader
 import Data.Maybe (catMaybes)
 
+-- | Specifies the non-generic details for a writer.
 data Language a m =
     Language
-        { lBeginTag :: QName -> [(String, String)] -> W a m ()
+        { -- | Given a tag name and attributes, start writing a tag
+          lBeginTag :: QName -> [(String, String)] -> W a m ()
+          -- | Given a tag name and attributes, finish writing a tag
         , lEndTag :: QName -> [(String, String)] -> W a m ()
+          -- | Write a text node
         , lText :: String -> W a m ()
+          -- | Begin an attribute list
         , lBeginAttribs :: W a m ()
+          -- | Write an attribute separator
         , lSepAttribs :: W a m ()
+          -- | End an attribute list
         , lEndAttribs :: W a m ()
+          -- | Write one attribute (name, value)
         , lAttrib :: QName -> a -> W a m ()
+          -- | Determine whether an attribute should be rendered in the
+          -- attribute list
         , lAttribVisible :: XmlTree -> Bool
+          -- | Start a child node list
         , lBeginChildren :: W a m ()
+          -- | Write a child node separator
         , lSepChildren :: W a m ()
+          -- | Finish a child node list
         , lEndChildren :: W a m ()
         }
 

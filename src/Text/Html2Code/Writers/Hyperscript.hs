@@ -1,7 +1,13 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
 {-#LANGUAGE TupleSections #-}
+
+-- | Writer for Hyperscript. This should also work with virtualdom, which uses
+-- Hyperscript's EDSL for defining virtual DOM nodes.
 module Text.Html2Code.Writers.Hyperscript
+( hyperscript
+, write
+)
 where
 
 import Data.Monoid ( Monoid (..), (<>) )
@@ -19,6 +25,7 @@ import Data.Char (toLower)
 import Data.List (intercalate)
 import Safe (readMay)
 
+-- | Language definition for Hyperscript
 hyperscript :: (StringLike a, IsString a, Monoid a, Monad m)
         => Language a m
 hyperscript = Language
@@ -57,15 +64,22 @@ hyperscript = Language
         echo ""
     }
 
+-- | Render a document as Hyperscript.
 write :: (StringLike a, IsString a, Monoid a, Monad m)
       => (String -> m ())
       -> [XmlTree]
       -> m a
 write = G.write hyperscript
 
+-- | Quote a string literal for JavaScript
+--
+-- TODO: this currently assumes that the string literal quoting rules for
+-- JavaScript are identical to Haskell's 'Show' semantics, which is not quite
+-- correct, but will work for trivial cases.
 quoteStr :: (StringLike a, IsString a) => a -> a
 quoteStr = fromString . show . toString
 
+-- | Write an attribute as Hyperscript
 hyAttrib :: (StringLike a, IsString a, Monoid a, Monad m)
          => QName -> a -> W a m ()
 hyAttrib name value = do

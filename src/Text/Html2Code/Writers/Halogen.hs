@@ -1,7 +1,24 @@
 {-#LANGUAGE OverloadedStrings #-}
 {-#LANGUAGE LambdaCase #-}
 {-#LANGUAGE TupleSections #-}
+
+-- | Writer for Halogen (https://github.com/slamdata/purescript-halogen).
+--
+-- The resulting PureScript code assumes that the following imports are in
+-- scope:
+--
+-- @
+-- import Halogen as H
+-- import Halogen.HTML as HH
+-- import Halogen.HTML.Events as HE
+-- import Halogen.HTML.Properties as HP
+-- import Halogen.HTML.Core as HC
+-- @
+--
 module Text.Html2Code.Writers.Halogen
+( halogen
+, write
+)
 where
 
 import Data.Monoid ( Monoid (..), (<>) )
@@ -19,6 +36,7 @@ import Data.Char (toLower)
 import Data.List (intercalate)
 import Safe (readMay)
 
+-- | Language definition for Halogen
 halogen :: (StringLike a, IsString a, Monoid a, Monad m)
         => Language a m
 halogen = Language
@@ -46,15 +64,22 @@ halogen = Language
         echo "]"
     }
 
+-- | Render a document as Halogen
 write :: (StringLike a, IsString a, Monoid a, Monad m)
       => (String -> m ())
       -> [XmlTree]
       -> m a
 write = G.write halogen
 
+-- | Quote a string literal for PureScript
+--
+-- TODO: this currently assumes that the string literal quoting rules for
+-- PureScript are identical to Haskell's 'Show' semantics, which is probably
+-- not ideal.
 quoteStr :: (StringLike a, IsString a) => a -> a
 quoteStr = fromString . show . toString
 
+-- | Render an attribute
 halogenAttrib :: (StringLike a, IsString a, Monoid a, Monad m)
               => QName -> a -> W a m ()
 halogenAttrib name value = do
@@ -64,6 +89,7 @@ halogenAttrib name value = do
     echo $ " "
     echo $ fromString value'
 
+-- | Map a raw HTML DOM attribute to PureScript attribute source.
 translateAttribute :: (QName, String) -> Either String (String, String)
 translateAttribute (name, val) = do
     case map toLower . qualifiedName $ name of
